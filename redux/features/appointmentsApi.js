@@ -18,9 +18,13 @@ export const appointmentsApi = apiSlice.injectEndpoints({
       query: ({ id, ...data }) => ({ url: `v1/appointments/${id}`, method: "PATCH", body: data }),
       invalidatesTags: ["Appointments"],
     }),
-
     deleteAppointment: builder.mutation({
       query: (id) => ({ url: `v1/appointments/${id}`, method: "DELETE" }),
+      invalidatesTags: ["Appointments"],
+    }),
+    // Smart booking endpoint
+    smartBooking: builder.mutation({
+      query: (data) => ({ url: "v1/appointments/smart-booking", method: "POST", body: data }),
       invalidatesTags: ["Appointments"],
     }),
   }),
@@ -32,4 +36,5 @@ export const {
   useUpdateAppointmentMutation,
   usePatchAppointmentMutation,
   useDeleteAppointmentMutation,
+  useSmartBookingMutation,
 } = appointmentsApi
