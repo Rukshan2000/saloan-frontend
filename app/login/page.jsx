@@ -1,50 +1,55 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useDispatch, useSelector } from "react-redux";
-import { loginStart, loginSuccess, loginFailure } from "@/redux/auth/login_slice";
-import { useLoginMutation } from "@/redux/auth/auth_api";
+import { useAuth } from "@/contexts/AuthContext";
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login, user, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [login] = useLoginMutation();
-  const dispatch = useDispatch();
-  const { isLoading, error, user } = useSelector((state) => state.login);
   const [formError, setFormError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setFormError("");
-    dispatch(loginStart());
+    setIsSubmitting(true);
+
     try {
-      const result = await login({ email, password, rememberMe }).unwrap();
-      dispatch(loginSuccess({ user: result.user, token: result.token }));
-      // Save user data to localStorage
-      localStorage.setItem("user", JSON.stringify({
-        id: result.user.id,
-        role: result.user.role,
-        email: result.user.email,
-        name: result.user.name,
-        ...result.user
-      }));
-      localStorage.setItem("token", result.token);
-      // Redirect or show success message here
-    } catch (err) {
-      dispatch(loginFailure("Invalid credentials or server error."));
-      setFormError("Invalid credentials or server error.");
+      const result = await login(email, password);
+      
+      if (result.success) {
+        // Redirect to dashboard or intended page
+        router.push("/dashboard");
+      } else {
+        setFormError(result.error || "Login failed. Please try again.");
+      }
+    } catch (error) {
+      setFormError("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
-  }
+  };
 
   useEffect(() => {
-    if (user) {
+    // Redirect if already logged in
+    if (user && !loading) {
       router.push("/dashboard");
     }
-  }, [user, router]);
+  }, [user, loading, router]);
+
+  // Show loading while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-orange-50 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-orange-500/30 border-t-orange-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-orange-50 flex items-center justify-center p-6">
@@ -64,7 +69,7 @@ export default function LoginPage() {
 
         {/* Login Card */}
         <div className="bg-white border border-orange-100 rounded-3xl p-8 shadow-xl shadow-orange-100/30">
-          <div className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email Field */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700 block">
@@ -79,6 +84,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   required
+                  disabled={isSubmitting}
                 />
               </div>
             </div>
@@ -97,11 +103,13 @@ export default function LoginPage() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required
+                  disabled={isSubmitting}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  disabled={isSubmitting}
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -116,6 +124,7 @@ export default function LoginPage() {
                   checked={rememberMe}
                   onChange={e => setRememberMe(e.target.checked)}
                   className="w-4 h-4 text-orange-500 bg-gray-50 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
+                  disabled={isSubmitting}
                 />
                 <span className="text-sm text-gray-600">Remember me</span>
               </label>
@@ -136,11 +145,11 @@ export default function LoginPage() {
 
             {/* Submit Button */}
             <button
-              onClick={handleSubmit}
-              disabled={isLoading}
+              type="submit"
+              disabled={isSubmitting}
               className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 text-white font-semibold py-4 px-6 rounded-2xl transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 disabled:shadow-none"
             >
-              {isLoading ? (
+              {isSubmitting ? (
                 <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
@@ -149,7 +158,7 @@ export default function LoginPage() {
                 </>
               )}
             </button>
-          </div>
+          </form>
 
           {/* Sign Up Link */}
           <div className="mt-8 text-center">

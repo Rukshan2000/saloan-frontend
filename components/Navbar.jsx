@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useState, useRef, useEffect } from "react"
-import { useSelector } from "react-redux"
+import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react"
 import MegaMenu from "./MegaMenu"
@@ -13,7 +13,7 @@ export function Navbar() {
   const [showProfileCard, setShowProfileCard] = useState(false)
   const profileCardRef = useRef(null)
   const profileButtonRef = useRef(null)
-  const user = useSelector((state) => state.auth.user)
+  const { user, logout } = useAuth()
   
   let navItems = []
 
@@ -77,26 +77,16 @@ export function Navbar() {
     }
   }, [])
 
-  const handleSignOut = () => {
-    // Remove user from localStorage and dispatch logout
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
+  const handleSignOut = async () => {
+    try {
+      await logout();
+      setShowProfileCard(false);
+      window.location.href = "/login";
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Force logout even if API call fails
+      window.location.href = "/login";
     }
-    // Try both login and auth slices for logout
-    try {
-      const { logout } = require("@/redux/auth/login_slice");
-      const { useDispatch } = require("react-redux");
-      const dispatch = useDispatch();
-      dispatch(logout());
-    } catch {}
-    try {
-      const { logout } = require("@/redux/auth/auth_slice");
-      const { useDispatch } = require("react-redux");
-      const dispatch = useDispatch();
-      dispatch(logout());
-    } catch {}
-    window.location.href = "/login";
   }
 
   return (

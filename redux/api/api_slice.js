@@ -73,16 +73,40 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react"
 
 const baseQuery = fetchBaseQuery({
-  baseUrl: `${process.env.NEXT_PUBLIC_API_URL}`,
+  baseUrl: `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1'}`,
   credentials: "include",
-  prepareHeaders: (headers) => {
-    // No authentication headers added
-    return headers
+  prepareHeaders: (headers, { getState }) => {
+    // Add authentication token to headers
+    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+    if (token) {
+      headers.set('authorization', `Bearer ${token}`);
+    }
+    headers.set('accept', 'application/json');
+    headers.set('content-type', 'application/json');
+    return headers;
   },
 })
 
+// Base query with automatic logout on 401
+const baseQueryWithAuth = async (args, api, extraOptions) => {
+  const result = await baseQuery(args, api, extraOptions);
+  
+  if (result?.error?.status === 401) {
+    // Clear auth data and redirect to login
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('token_expires_in');
+      window.location.href = '/login';
+    }
+  }
+  
+  return result;
+}
+
 export const apiSlice = createApi({
-  baseQuery,
+  baseQuery: baseQueryWithAuth,
   tagTypes: ["Roles", "Users", "widget", "Invoices", "InvoiceStats", "Appointments", "Services", "Branches"],
   endpoints: (builder) => ({}),
 })

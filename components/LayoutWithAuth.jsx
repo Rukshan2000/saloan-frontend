@@ -1,9 +1,9 @@
 "use client"
 import { Navbar } from "./Navbar"
-import { useSelector } from "react-redux"
+import { useAuth } from "@/contexts/AuthContext"
 
 export default function LayoutWithAuth({ children }) {
-  const user = useSelector(state => state.login.user)
+  const { user } = useAuth()
   return (
     <div className="min-h-screen flex flex-row">
       {user && <Navbar />}

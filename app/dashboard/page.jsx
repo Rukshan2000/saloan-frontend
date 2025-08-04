@@ -1,41 +1,108 @@
-import React from "react";
+"use client"
+
+import ProtectedRoute from "@/components/ProtectedRoute"
+import { useAuth } from "@/contexts/AuthContext"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function DashboardPage() {
+  const { user, logout } = useAuth()
+
+  const handleLogout = async () => {
+    try {
+      await logout()
+      window.location.href = "/login"
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
+  }
+
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold mb-6 text-gray-800">Dashboard</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div className="bg-white rounded-xl shadow p-6 flex flex-col items-start border border-gray-100">
-          <div className="text-2xl font-semibold text-gray-700 mb-2">Total Users</div>
-          <div className="text-3xl font-bold text-blue-600 mb-1">1240</div>
-          <div className="text-gray-500 text-sm">Active users registered on the platform.</div>
-        </div>
-        <div className="bg-white rounded-xl shadow p-6 flex flex-col items-start border border-gray-100">
-          <div className="text-2xl font-semibold text-gray-700 mb-2">Bookings Today</div>
-          <div className="text-3xl font-bold text-green-600 mb-1">32</div>
-          <div className="text-gray-500 text-sm">Number of bookings made today.</div>
-        </div>
-        <div className="bg-white rounded-xl shadow p-6 flex flex-col items-start border border-gray-100">
-          <div className="text-2xl font-semibold text-gray-700 mb-2">Total Revenue</div>
-          <div className="text-3xl font-bold text-yellow-600 mb-1">$4,500</div>
-          <div className="text-gray-500 text-sm">Revenue generated this month.</div>
-        </div>
-        <div className="bg-white rounded-xl shadow p-6 flex flex-col items-start border border-gray-100">
-          <div className="text-2xl font-semibold text-gray-700 mb-2">Services Offered</div>
-          <div className="text-3xl font-bold text-purple-600 mb-1">18</div>
-          <div className="text-gray-500 text-sm">Different services available.</div>
-        </div>
-        <div className="bg-white rounded-xl shadow p-6 flex flex-col items-start border border-gray-100">
-          <div className="text-2xl font-semibold text-gray-700 mb-2">Branches</div>
-          <div className="text-3xl font-bold text-pink-600 mb-1">5</div>
-          <div className="text-gray-500 text-sm">Active branches in the network.</div>
-        </div>
-        <div className="bg-white rounded-xl shadow p-6 flex flex-col items-start border border-gray-100">
-          <div className="text-2xl font-semibold text-gray-700 mb-2">Pending Approvals</div>
-          <div className="text-3xl font-bold text-red-600 mb-1">7</div>
-          <div className="text-gray-500 text-sm">Bookings or users pending approval.</div>
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+            <p className="text-gray-600">Welcome back, {user?.name}!</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* User Info Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>User Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <p><strong>Name:</strong> {user?.name}</p>
+                  <p><strong>Email:</strong> {user?.email}</p>
+                  <p><strong>Role:</strong> {user?.role}</p>
+                  <p><strong>Branch:</strong> {user?.branch_id || 'Not assigned'}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <Button className="w-full" variant="outline">
+                    View Profile
+                  </Button>
+                  <Button className="w-full" variant="outline">
+                    Settings
+                  </Button>
+                  <Button 
+                    className="w-full" 
+                    variant="destructive"
+                    onClick={handleLogout}
+                  >
+                    Logout
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* System Status Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>System Status</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span>Authentication</span>
+                    <span className="text-green-600 font-medium">✓ Active</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>API Connection</span>
+                    <span className="text-green-600 font-medium">✓ Connected</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Session</span>
+                    <span className="text-green-600 font-medium">✓ Valid</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Development Info */}
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Authentication Debug Info</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <pre className="bg-gray-100 p-4 rounded text-sm overflow-auto">
+                {JSON.stringify(user, null, 2)}
+              </pre>
+            </CardContent>
+          </Card>
         </div>
       </div>
-    </div>
-  );
+    </ProtectedRoute>
+  )
 }

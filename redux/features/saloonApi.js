@@ -243,6 +243,24 @@ export const saloonApi = apiSlice.injectEndpoints({
       query: (id) => ({ url: `v1/promotions/${id}`, method: "DELETE" }),
       invalidatesTags: ["Promotions"],
     }),
+
+    // Roles
+    getRoles: builder.query({
+      query: () => ({ url: "v1/roles", method: "GET" }),
+      providesTags: ["Roles"],
+    }),
+    createRole: builder.mutation({
+      query: (data) => ({ url: "v1/roles", method: "POST", body: data }),
+      invalidatesTags: ["Roles"],
+    }),
+    updateRole: builder.mutation({
+      query: ({ id, ...data }) => ({ url: `v1/roles/${id}`, method: "PUT", body: data }),
+      invalidatesTags: ["Roles"],
+    }),
+    deleteRole: builder.mutation({
+      query: (id) => ({ url: `v1/roles/${id}`, method: "DELETE" }),
+      invalidatesTags: ["Roles"],
+    }),
   }),
 })
 
@@ -252,6 +270,11 @@ export const {
   useUpdateBranchMutation,
   usePatchBranchMutation,
   useDeleteBranchMutation,
+
+  useGetRolesQuery,
+  useCreateRoleMutation,
+  useUpdateRoleMutation,
+  useDeleteRoleMutation,
 
   useGetUsersQuery,
   useCreateUserMutation,

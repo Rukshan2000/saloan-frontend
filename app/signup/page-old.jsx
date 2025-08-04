@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,45 +8,23 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
 import { CheckCircle } from "lucide-react"
-import { useAuth } from "@/contexts/AuthContext"
-import { useGetRolesQuery, useGetBranchesQuery } from "@/redux/features/saloonApi"
+import { authApi } from "@/lib/api"
+import { useCreateUserMutation } from "@/redux/features/usersApi"
 
 export default function SignUpPage() {
-  const router = useRouter()
-  const { register } = useAuth()
   const [currentStep, setCurrentStep] = useState(1) // 1: Form, 2: Success
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
-    password_confirmation: "",
-    role_id: 3, // Default to customer role
+    confirmPassword: "",
+    role: 3, // Default to customer role
     branch_id: "", // Optional, can be set if needed
     agreeToTerms: false,
   })
+  const [addUser] = useCreateUserMutation()
   const [errors, setErrors] = useState({})
   const [isLoading, setIsLoading] = useState(false)
-
-  // Try to get roles and branches, but provide fallbacks if they fail
-  const { data: roles = [], error: rolesError } = useGetRolesQuery()
-  const { data: branches = [], error: branchesError } = useGetBranchesQuery()
-
-  // Fallback roles if API fails
-  const defaultRoles = [
-    { id: 1, name: 'Admin' },
-    { id: 2, name: 'Beautician' },
-    { id: 3, name: 'Customer' }
-  ]
-
-  // Fallback branches if API fails
-  const defaultBranches = [
-    { id: 1, name: 'Main Branch' },
-    { id: 2, name: 'Downtown Branch' }
-  ]
-
-  // Use API data if available, otherwise use defaults
-  const availableRoles = rolesError ? defaultRoles : roles
-  const availableBranches = branchesError ? defaultBranches : branches
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -70,62 +47,44 @@ export default function SignUpPage() {
     if (!formData.name.trim()) {
       newErrors.name = "Name is required"
     }
-
     if (!formData.email.trim()) {
       newErrors.email = "Email is required"
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Email is invalid"
     }
-
     if (!formData.password) {
       newErrors.password = "Password is required"
-    } else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters"
+    } else if (formData.password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters"
     }
-
-    if (formData.password !== formData.password_confirmation) {
-      newErrors.password_confirmation = "Passwords do not match"
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match"
     }
-
     if (!formData.agreeToTerms) {
       newErrors.agreeToTerms = "You must agree to the terms and conditions"
     }
-
-    if (!formData.role_id) {
-      newErrors.role_id = "Role is required"
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+    return newErrors
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!validateForm()) return
+    const newErrors = validateForm()
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
+      return
+    }
 
     setIsLoading(true)
     try {
-      const userData = {
+      await addUser({
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        password_confirmation: formData.password_confirmation,
-        role_id: formData.role_id,
+        role_id: formData.role, // Send as role_id
         branch_id: formData.branch_id || null,
-      }
-
-      const result = await register(userData)
-      
-      if (result.success) {
-        setCurrentStep(2) // Show success
-      } else {
-        // Handle validation errors
-        if (result.errors) {
-          setErrors(result.errors)
-        } else {
-          setErrors({ general: result.error || "Failed to create account" })
-        }
-      }
+      }).unwrap()
+      setCurrentStep(2) // Show success
     } catch (error) {
       setErrors({ general: error.message || "Failed to create account" })
     } finally {
@@ -149,7 +108,7 @@ export default function SignUpPage() {
 
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-              Full Name *
+              Name *
             </label>
             <Input
               type="text"
@@ -158,7 +117,7 @@ export default function SignUpPage() {
               value={formData.name}
               onChange={handleChange}
               className={errors.name ? "border-red-500" : ""}
-              placeholder="Enter your full name"
+              placeholder="John Doe"
             />
             {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
           </div>
@@ -174,7 +133,7 @@ export default function SignUpPage() {
               value={formData.email}
               onChange={handleChange}
               className={errors.email ? "border-red-500" : ""}
-              placeholder="Enter your email address"
+              placeholder="john.doe@example.com"
             />
             {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
           </div>
@@ -196,82 +155,42 @@ export default function SignUpPage() {
           </div>
 
           <div>
-            <label htmlFor="password_confirmation" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
               Confirm Password *
             </label>
             <Input
               type="password"
-              id="password_confirmation"
-              name="password_confirmation"
-              value={formData.password_confirmation}
+              id="confirmPassword"
+              name="confirmPassword"
+              value={formData.confirmPassword}
               onChange={handleChange}
-              className={errors.password_confirmation ? "border-red-500" : ""}
+              className={errors.confirmPassword ? "border-red-500" : ""}
               placeholder="Confirm your password"
             />
-            {errors.password_confirmation && <p className="text-red-500 text-xs mt-1">{errors.password_confirmation}</p>}
+            {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
           </div>
 
-          <div>
-            <label htmlFor="role_id" className="block text-sm font-medium text-gray-700 mb-2">
-              Role *
-            </label>
-            <select
-              id="role_id"
-              name="role_id"
-              value={formData.role_id}
-              onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded-md ${errors.role_id ? "border-red-500" : "border-gray-300"}`}
-            >
-              <option value="">Select a role</option>
-              {availableRoles.map((role) => (
-                <option key={role.id} value={role.id}>
-                  {role.name}
-                </option>
-              ))}
-            </select>
-            {errors.role_id && <p className="text-red-500 text-xs mt-1">{errors.role_id}</p>}
-          </div>
-
-          <div>
-            <label htmlFor="branch_id" className="block text-sm font-medium text-gray-700 mb-2">
-              Branch (Optional)
-            </label>
-            <select
-              id="branch_id"
-              name="branch_id"
-              value={formData.branch_id}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            >
-              <option value="">Select a branch (optional)</option>
-              {availableBranches.map((branch) => (
-                <option key={branch.id} value={branch.id}>
-                  {branch.name}
-                </option>
-              ))}
-            </select>
-            {errors.branch_id && <p className="text-red-500 text-xs mt-1">{errors.branch_id}</p>}
-          </div>
-
-          <div className="flex items-center space-x-3">
-            <Checkbox
-              id="agreeToTerms"
-              name="agreeToTerms"
-              checked={formData.agreeToTerms}
-              onCheckedChange={(checked) => 
-                setFormData({ ...formData, agreeToTerms: checked })
-              }
-            />
-            <label htmlFor="agreeToTerms" className="text-sm text-gray-600">
-              I agree to the{" "}
-              <Link href="/terms" className="text-orange-500 hover:underline">
-                Terms and Conditions
-              </Link>{" "}
-              and{" "}
-              <Link href="/privacy" className="text-orange-500 hover:underline">
-                Privacy Policy
-              </Link>
-            </label>
+          <div className="space-y-4">
+            <div className="flex items-start space-x-2">
+              <Checkbox
+                id="agreeToTerms"
+                name="agreeToTerms"
+                checked={formData.agreeToTerms}
+                onCheckedChange={(checked) => setFormData({ ...formData, agreeToTerms: checked })}
+                className={errors.agreeToTerms ? "border-red-500" : ""}
+              />
+              <label htmlFor="agreeToTerms" className="text-sm text-gray-700">
+                I agree to the{" "}
+                <Link href="/terms" className="text-orange-500 hover:text-orange-600">
+                  Terms and Conditions
+                </Link>{" "}
+                and{" "}
+                <Link href="/privacy" className="text-orange-500 hover:text-orange-600">
+                  Privacy Policy
+                </Link>{" "}
+                *
+              </label>
+            </div>
             {errors.agreeToTerms && <p className="text-red-500 text-xs">{errors.agreeToTerms}</p>}
           </div>
 
@@ -294,8 +213,8 @@ export default function SignUpPage() {
           Welcome to ZenSlot! Your account has been created successfully.
         </p>
         <div className="space-y-4">
-          <Link href="/dashboard">
-            <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white">Go to Dashboard</Button>
+          <Link href="/login">
+            <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white">Sign In to Your Account</Button>
           </Link>
           <Link href="/">
             <Button variant="outline" className="w-full">
@@ -317,20 +236,25 @@ export default function SignUpPage() {
             </div>
             <span className="font-bold text-2xl text-gray-900">ZenSlot</span>
           </Link>
+          <h2 className="text-3xl font-bold text-gray-900">
+            Create your account
+          </h2>
+          <p className="mt-2 text-gray-600">
+            Join our community and help us make a difference
+          </p>
         </div>
 
-        {currentStep === 1 ? renderSignupForm() : renderSuccess()}
+        {currentStep === 1 && renderSignupForm()}
+        {currentStep === 2 && renderSuccess()}
 
-        {currentStep === 1 && (
-          <div className="text-center">
-            <p className="text-sm text-gray-600">
-              Already have an account?{" "}
-              <Link href="/login" className="font-medium text-orange-600 hover:text-orange-500">
-                Sign in here
-              </Link>
-            </p>
-          </div>
-        )}
+        <div className="text-center">
+          <p className="text-sm text-gray-600">
+            Already have an account?{" "}
+            <Link href="/login" className="text-orange-500 hover:text-orange-600 font-medium">
+              Sign in here
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   )
